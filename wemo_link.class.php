@@ -23,21 +23,50 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-define('WEMO_PORT', '49153');
+
+/**
+ * IP address of your wemo bridge
+ * This should be static
+ */
 define('WEMO_IP', '192.168.0.14');
+
+/**
+ * This is the port that we will connect to
+ * It will either be 49152 or 49153
+ */
+define('WEMO_PORT', '49153');
+
+/**
+ * Where the cache of the device is to be stored
+ */
 define('WEMO_CACHE', __DIR__.'/cache.json');
 
+/**
+ * WemoLink
+ * @author Matthew Burns <mazodude>
+ * @package WemoLink
+ */
 class WemoLink
 {
     
+    /**
+     * info
+     * Holds all the info about the wemo system
+     * @var object
+     */
     private $info;
 
-    function __construct(){
+    /**
+     * Constuctor
+     */
+    function __construct()
+    {
 
     }
 
     /**
-     * 
+     * wemoInit
+     * Loads the cache or creates it
      */
     public function wemoInit()
     {
@@ -53,7 +82,9 @@ class WemoLink
     }
 
     /**
-     * 
+     * loadCache
+     * Loads the cache from the file
+     * @return object JSON object of wemo info
      */
     private function loadCache()
     {
@@ -68,17 +99,21 @@ class WemoLink
     }
 
     /**
-     * 
+     * writeCache
+     * Writes the cache out to a file
+     * @param object $object object to save to file
      */
-    private function writeCache($array)
+    private function writeCache($object)
     {
         $fp = fopen(WEMO_CACHE, 'w');
-        fwrite($fp, json_encode($array));
+        fwrite($fp, json_encode($object));
         fclose($fp);
     }
 
     /**
-     * 
+     * getSetup
+     * Grabs the setup file from the wemo an returns it as an object
+     * @return object setup info from wemo
      */
     private function getSetup()
     {
@@ -91,12 +126,22 @@ class WemoLink
     }
 
     /**
-     * 
+     * getDevices
+     * Gets the list of devices from the wemo
+     * @return object object of devices from wemo
      */
     private function getDevices()
     {
         $UDN = $this->info->device->device->UDN;
-        $data = '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetEndDevices xmlns:u="urn:Belkin:service:bridge:1"><ReqListType>SCAN_LIST</ReqListType><DevUDN>'.$UDN.'</DevUDN></u:GetEndDevices></s:Body></s:Envelope>';
+        $data = '<?xml version="1.0"?>
+                <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+                    <s:Body>
+                        <u:GetEndDevices xmlns:u="urn:Belkin:service:bridge:1">
+                            <ReqListType>SCAN_LIST</ReqListType>
+                            <DevUDN>'.$UDN.'</DevUDN>
+                        </u:GetEndDevices>
+                    </s:Body>
+                </s:Envelope>';
 
         $headers_array = array(
                     'Content-type: text/xml; charset="utf-8"',
@@ -122,14 +167,24 @@ class WemoLink
     }
 
     /**
-     * 
+     * turnOn
+     * Turns a light on
+     * @param string $light Name of the light
+     * @param int $brightness brightness level to set
      */
     public function turnOn($light,$brightness=255)
     {
         $lightname = $light;
         $light = $this->bulbNameToID($light);
         $isgroup = 'NO';
-        $data = '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:SetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1"><DeviceStatusList>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;DeviceStatus&gt;&lt;DeviceID&gt;'.$light.'&lt;/DeviceID&gt;&lt;CapabilityID&gt;10008&lt;/CapabilityID&gt;&lt;CapabilityValue&gt;'.$brightness.':0&lt;/CapabilityValue&gt;&lt;IsGroupAction&gt;'.$isgroup.'&lt;/IsGroupAction&gt;&lt;/DeviceStatus&gt;</DeviceStatusList></u:SetDeviceStatus></s:Body></s:Envelope>';
+        $data = '<?xml version="1.0"?>
+                <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+                    <s:Body>
+                        <u:SetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1">
+                            <DeviceStatusList>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;DeviceStatus&gt;&lt;DeviceID&gt;'.$light.'&lt;/DeviceID&gt;&lt;CapabilityID&gt;10008&lt;/CapabilityID&gt;&lt;CapabilityValue&gt;'.$brightness.':0&lt;/CapabilityValue&gt;&lt;IsGroupAction&gt;'.$isgroup.'&lt;/IsGroupAction&gt;&lt;/DeviceStatus&gt;</DeviceStatusList>
+                        </u:SetDeviceStatus>
+                    </s:Body>
+                </s:Envelope>';
         $headers_array = array(
                     'Content-type: text/xml; charset="utf-8"',
                     'SOAPACTION: "urn:Belkin:service:bridge:1#SetDeviceStatus"',
@@ -141,14 +196,23 @@ class WemoLink
     }
 
     /**
-     * 
+     * turnOff
+     * Turns off a light
+     * @param string $light Name of the light
      */
     public function turnOff($light)
     {
         $lightname = $light;
         $light = $this->bulbNameToID($light);
         $isgroup = 'NO';
-        $data = '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:SetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1"><DeviceStatusList>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;DeviceStatus&gt;&lt;DeviceID&gt;'.$light.'&lt;/DeviceID&gt;&lt;CapabilityID&gt;10008&lt;/CapabilityID&gt;&lt;CapabilityValue&gt;0:0&lt;/CapabilityValue&gt;&lt;IsGroupAction&gt;'.$isgroup.'&lt;/IsGroupAction&gt;&lt;/DeviceStatus&gt;</DeviceStatusList></u:SetDeviceStatus></s:Body></s:Envelope>';
+        $data = '<?xml version="1.0"?>
+                <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+                    <s:Body>
+                        <u:SetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1">
+                            <DeviceStatusList>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;DeviceStatus&gt;&lt;DeviceID&gt;'.$light.'&lt;/DeviceID&gt;&lt;CapabilityID&gt;10008&lt;/CapabilityID&gt;&lt;CapabilityValue&gt;0:0&lt;/CapabilityValue&gt;&lt;IsGroupAction&gt;'.$isgroup.'&lt;/IsGroupAction&gt;&lt;/DeviceStatus&gt;</DeviceStatusList>
+                        </u:SetDeviceStatus>
+                    </s:Body>
+                </s:Envelope>';
         $headers_array = array(
                     'Content-type: text/xml; charset="utf-8"',
                     'SOAPACTION: "urn:Belkin:service:bridge:1#SetDeviceStatus"',
@@ -160,7 +224,12 @@ class WemoLink
     }
 
     /**
-     * 
+     * lightStatus
+     * Gets the light status of a light
+     * This will also allow you to get the real status of a light
+     * the second time you connect to it
+     * @param string $light Name of the light
+     * @return JSON JSON of the status
      */
     public function lightStatus($light)
     {
@@ -187,12 +256,22 @@ class WemoLink
     }
 
     /**
-     * 
+     * getStatus
+     * Send the curl to the wemo to get the status of the light
+     * @param string $light Name of the light
+     * @return string Response from the wemo
      */
     private function getStatus($light)
     {
         $light = $this->bulbNameToID($light);
-        $data = '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1"><DeviceIDs>'.$light.'</DeviceIDs></u:GetDeviceStatus></s:Body></s:Envelope>';
+        $data = '<?xml version="1.0"?>
+                <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+                    <s:Body>
+                        <u:GetDeviceStatus xmlns:u="urn:Belkin:service:bridge:1">
+                            <DeviceIDs>'.$light.'</DeviceIDs>
+                        </u:GetDeviceStatus>
+                    </s:Body>
+                </s:Envelope>';
         $headers_array = array(
                     'Content-type: text/xml; charset="utf-8"',
                     'SOAPACTION: "urn:Belkin:service:bridge:1#GetDeviceStatus"',
@@ -204,7 +283,11 @@ class WemoLink
     }
 
     /**
-     * 
+     * sendCurl
+     * Curl wrapper for sending to wemo
+     * @param string $url url and port to connect to
+     * @param array $data Array of the post to send
+     * @param array $headers_array Array of header to send
      */
     private function sendCurl($url,$data,$headers_array)
     {
@@ -220,7 +303,10 @@ class WemoLink
     }
 
     /**
-     * 
+     * bulbNameToID
+     * Changes the bulb string to an id that the wemo understands
+     * @param string $light Name of the light
+     * @return int ID of light
      */
     private function bulbNameToID($light)
     {
@@ -233,7 +319,10 @@ class WemoLink
     }
 
     /**
-     * 
+     * parseXML
+     * wrapper for simplexml
+     * @param string $string xml from wemo
+     * @return object object of xml
      */
     private function parseXML($string)
     {
@@ -242,7 +331,9 @@ class WemoLink
     }
 
     /**
-     * 
+     * ping
+     * Pings the wemo to see if it will respond
+     * @return bool Returns true if up, false if down
      */
     public function ping()
     {
